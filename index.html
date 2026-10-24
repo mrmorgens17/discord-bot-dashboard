@@ -546,7 +546,7 @@
           </div>
           
           <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">
-            Erstellt ein offizielles Giveaway mit Countdown im Discord. Der Bot reagiert mit 🎉 und wählt nach Ablauf automatisch Zufallsgewinner aus.
+            Erstellt ein Giveaway im gewünschten Kanal. Der Bot reagiert mit 🎉 und wählt nach Ablauf automatisch Zufallsgewinner aus.
           </p>
 
           <div class="form-group">
@@ -586,7 +586,7 @@
           </div>
 
           <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">
-            Sobald ein Nutzer auf die angegebene Discord-Nachricht mit dem Emoji reagiert, weist der Bot ihm automatisch die entsprechende Rolle zu.
+            Sobald ein Nutzer auf die Discord-Nachricht mit dem Emoji reagiert, weist der Bot ihm die Rolle zu.
           </p>
 
           <div class="form-group">
@@ -797,13 +797,13 @@
         <div class="dashboard-grid">
           <div class="card">
             <div class="card-title">
-              <span><i class="fa-brands fa-twitch" style="color: var(--twitch)"></i> Twitch Streamer Alert</span>
+              <span><i class="fa-brands fa-twitch" style="color: var(--twitch)"></i> Twitch Alerts verwalten</span>
             </div>
 
             <div class="form-group">
               <label>Twitch-Kanalname (Benutzername)</label>
               <input type="text" id="twitchChannelInput" placeholder="z. B. Mr_Morgens" oninput="updateTwitchPreview()">
-              <small style="color: var(--text-muted);">Dein Twitch-Kanal wird vom Bot automatisch ohne Login oder API-Key überwacht.</small>
+              <small style="color: var(--text-muted);">Wird vom Bot automatisch im Hintergrund auf Live-Status überwacht.</small>
             </div>
 
             <div class="form-group">
@@ -825,10 +825,15 @@
 
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
               <button id="saveTwitchBtn" class="btn btn-primary" onclick="saveTwitchSettings()">
-                💾 Twitch-Alerts speichern
+                <i class="fa-solid fa-plus"></i> Überwachung hinzufügen & speichern
               </button>
               <span id="twitchSaveStatus" style="font-size: 0.9rem;"></span>
             </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+            <label>Aktive Twitch-Überwachungen</label>
+            <div id="twitchMonitorsList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;"></div>
           </div>
 
           <div class="card">
@@ -900,8 +905,7 @@
     let currentConfig = {
       bot_token: "DEIN_BOT_TOKEN",
       selected_guild_id: "",
-      twitch_channel_name: "",
-      twitch_alert_channel_id: "",
+      twitch_monitors: [],
       colors: { 
         embed_twitch: "#9146FF", 
         embed_primary: "#5865F2", 
@@ -979,6 +983,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       renderBadWords();
       renderReactionRoles();
+      renderTwitchMonitors();
       updateTwitchPreview();
       updateWelcomePreview();
       updateTicketPreview();
@@ -996,7 +1001,6 @@
         document.getElementById('botApiHost').value = savedApiHost;
       }
 
-      // Token aus URL-Hash oder Speicher lesen
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
       let accessToken = params.get('access_token');
@@ -1130,12 +1134,10 @@
           });
         });
 
-        // Gespeicherte Server-Konfiguration vom Bot laden
         if (data.config) {
-          if (data.config.twitch) {
-            document.getElementById('twitchChannelInput').value = data.config.twitch.twitch_channel || "";
-            document.getElementById('twitchChannelSelect').value = data.config.twitch.alert_channel_id || "";
-            updateTwitchPreview();
+          if (data.config.twitch_monitors) {
+            currentConfig.twitch_monitors = data.config.twitch_monitors;
+            renderTwitchMonitors();
           }
           if (data.config.welcome) {
             document.getElementById('welcomeChannelSelect').value = data.config.welcome.channel_id || "";
@@ -1279,7 +1281,7 @@
       if (descEl) descEl.innerText = desc;
     }
 
-    // --- SPEICHERFUNKTIONEN FÜR BEGRÜSSUNG & TWITCH ---
+    // --- BEGRÜSSUNG SPEICHERN ---
     async function saveWelcomeSettings() {
       const guildId = document.getElementById('serverSelect').value;
       const statusSpan = document.getElementById('welcomeSaveStatus');
@@ -1319,36 +1321,83 @@
       }
     }
 
+    // --- TWITCH-STREAMER VERWALTUNG (MEHRERE KANÄLE & LÖSCHEN) ---
+    function renderTwitchMonitors() {
+      const container = document.getElementById('twitchMonitorsList');
+      if (!container) return;
+      container.innerHTML = "";
+
+      const monitors = currentConfig.twitch_monitors || [];
+
+      if (monitors.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Noch keine Twitch-Kanäle hinterlegt.</span>';
+        return;
+      }
+
+      monitors.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'status-box';
+        div.innerHTML = `
+          <div>
+            <strong>Kanal:</strong> <span style="color: var(--twitch); font-weight: 600;">${item.twitch_channel}</span> | 
+            <strong>Discord-Ziel:</strong> <span style="color: var(--primary); font-weight: 600;">#${item.channel_name || item.alert_channel_id}</span>
+          </div>
+          <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem;" onclick="removeTwitchMonitor(${idx})">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
     async function saveTwitchSettings() {
       const guildId = document.getElementById('serverSelect').value;
-      const twitchName = document.getElementById('twitchChannelInput').value.trim();
-      const alertChannelId = document.getElementById('twitchChannelSelect').value;
+      const twitchInput = document.getElementById('twitchChannelInput');
+      const twitchSelect = document.getElementById('twitchChannelSelect');
+      const twitchName = twitchInput.value.trim().toLowerCase();
+      const alertChannelId = twitchSelect.value;
+      const channelName = twitchSelect.options[twitchSelect.selectedIndex]?.text.replace("# ", "") || alertChannelId;
       const statusSpan = document.getElementById('twitchSaveStatus');
 
       if (!guildId) return alert("Bitte wähle zuerst oben einen Server aus.");
       if (!twitchName) return alert("Bitte gib einen Twitch-Kanalnamen ein.");
+      if (!alertChannelId) return alert("Bitte wähle einen Discord-Zielkanal aus.");
 
       statusSpan.innerText = "Speichere...";
       statusSpan.style.color = "#aaa";
 
-      const payload = {
-        guild_id: guildId,
+      if (!currentConfig.twitch_monitors) currentConfig.twitch_monitors = [];
+
+      const existingIdx = currentConfig.twitch_monitors.findIndex(m => m.twitch_channel.toLowerCase() === twitchName);
+      const newEntry = {
         twitch_channel: twitchName,
         alert_channel_id: alertChannelId,
+        channel_name: channelName,
         message: document.getElementById('alertMessage').value,
         color: document.getElementById('twitchEmbedColor').value
       };
+
+      if (existingIdx >= 0) {
+        currentConfig.twitch_monitors[existingIdx] = newEntry;
+      } else {
+        currentConfig.twitch_monitors.push(newEntry);
+      }
 
       try {
         const resp = await fetch(`${getApiBase()}/api/twitch/save`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            guild_id: guildId,
+            twitch_monitors: currentConfig.twitch_monitors
+          })
         });
 
         if (resp.ok) {
-          statusSpan.innerText = "✅ Erfolgreich gespeichert!";
+          statusSpan.innerText = "✅ Erfolgreich hinzugefügt!";
           statusSpan.style.color = "#4ade80";
+          renderTwitchMonitors();
+          twitchInput.value = "";
           setTimeout(() => { statusSpan.innerText = ""; }, 4000);
         } else {
           throw new Error("Fehler beim Speichern");
@@ -1357,6 +1406,27 @@
         console.error(e);
         statusSpan.innerText = "❌ Fehler (Bot offline oder Port prüfen)";
         statusSpan.style.color = "#f87171";
+      }
+    }
+
+    async function removeTwitchMonitor(idx) {
+      const guildId = document.getElementById('serverSelect').value;
+      if (!guildId) return;
+
+      currentConfig.twitch_monitors.splice(idx, 1);
+      renderTwitchMonitors();
+
+      try {
+        await fetch(`${getApiBase()}/api/twitch/save`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            guild_id: guildId,
+            twitch_monitors: currentConfig.twitch_monitors
+          })
+        });
+      } catch (e) {
+        console.error("Fehler beim Synchronisieren des Löschens:", e);
       }
     }
 
@@ -1676,14 +1746,6 @@
 
     // --- CONFIG EXPORTIEREN ---
     function exportConfig() {
-      const twitchInput = document.getElementById('twitchChannelInput');
-      const twitchSelect = document.getElementById('twitchChannelSelect');
-      const twitchColor = document.getElementById('twitchEmbedColor');
-
-      if (twitchInput) currentConfig.twitch_channel_name = twitchInput.value.trim();
-      if (twitchSelect) currentConfig.twitch_alert_channel_id = twitchSelect.value;
-      if (twitchColor) currentConfig.colors.embed_twitch = twitchColor.value;
-
       const welcomeSel = document.getElementById('welcomeChannelSelect');
       currentConfig.welcome = {
         channel_id: welcomeSel ? welcomeSel.value : "",
