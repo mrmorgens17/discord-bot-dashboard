@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Bot Control Panel</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f1117;
+      --bg-card: #181b26;
+      --bg-card-hover: #1f2333;
+      --border-color: #2b3044;
+      --primary: #5865F2;
+      --primary-hover: #4752c4;
+      --twitch: #9146FF;
+      --twitch-hover: #772ce8;
+      --success: #23a55a;
+      --danger: #f23f43;
+      --warning: #f0b232;
+      --text-main: #f2f3f5;
+      --text-muted: #949ba4;
+      --chat-bg: #313338;
+      --chat-embed-bg: #2b2d31;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: #12141c;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--primary);
+    }
+
+    .nav-tabs {
+      list-style: none;
+      padding: 15px 10px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+    }
+
+    .nav-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .nav-item:hover, .nav-item.active { background-color: var(--bg-card-hover); color: var(--text-main); }
+    .nav-item.active { background-color: rgba(88, 101, 242, 0.15); color: var(--primary); font-weight: 600; }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .topbar {
+      height: 70px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      background-color: var(--bg-card);
+      gap: 20px;
+    }
+
+    .server-select-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .content-area {
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input, textarea, select {
+      background: #11131a;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-discord { background: #5865F2; color: white; }
+    .btn-discord:hover { background: #4752c4; }
+
+    .btn-danger { background: rgba(242, 63, 67, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: white; }
+
+    .status-box {
+      border: 1px solid var(--border-color);
+      background: #12141c;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .profile-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .avatar-circle {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: #2b3044;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      overflow: hidden;
+    }
+
+    .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-badge.connected { background: rgba(35, 165, 90, 0.2); color: var(--success); }
+    .status-badge.disconnected { background: rgba(240, 178, 50, 0.2); color: var(--warning); }
+
+    .discord-chat-container {
+      background: var(--chat-bg);
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 0.95rem;
+    }
+
+    .chat-message { display: flex; gap: 14px; }
+    .bot-avatar { width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .message-content { flex: 1; }
+    .user-info { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .bot-tag { background: var(--primary); color: white; font-size: 0.65rem; padding: 2px 4px; border-radius: 3px; font-weight: 700; }
+    
+    .discord-embed { 
+      background: var(--chat-embed-bg); 
+      border-left: 4px solid var(--primary); 
+      border-radius: 4px; 
+      padding: 14px; 
+      margin-top: 8px; 
+      max-width: 500px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+    }
+    .embed-title { font-weight: 700; color: #fff; text-decoration: none; font-size: 1.05rem; }
+
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: #11131a;
+      padding: 10px;
+      border-radius: 8px;
+      min-height: 50px;
+      border: 1px solid var(--border-color);
+    }
+
+    .tag { background: #2b3044; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+    .tag i { cursor: pointer; color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <i class="fa-solid fa-robot"></i> Bot Dashboard
+    </div>
+    <ul class="nav-tabs">
+      <li class="nav-item active" id="btn-tab-discord" onclick="switchTab('discord')">
+        <i class="fa-brands fa-discord"></i> Discord & Server
+      </li>
+      <li class="nav-item" id="btn-tab-sendmessage" onclick="switchTab('sendmessage')">
+        <i class="fa-solid fa-paper-plane"></i> Nachricht senden
+      </li>
+      <li class="nav-item" id="btn-tab-polls" onclick="switchTab('polls')">
+        <i class="fa-solid fa-square-poll-vertical"></i> Umfragen
+      </li>
+      <li class="nav-item" id="btn-tab-reactionroles" onclick="switchTab('reactionroles')">
+        <i class="fa-solid fa-icons"></i> Reaktionsrollen
+      </li>
+      <li class="nav-item" id="btn-tab-welcome" onclick="switchTab('welcome')">
+        <i class="fa-solid fa-door-open"></i> Begrüßung
+      </li>
+      <li class="nav-item" id="btn-tab-tickets" onclick="switchTab('tickets')">
+        <i class="fa-solid fa-ticket-simple"></i> Ticketsystem
+      </li>
+      <li class="nav-item" id="btn-tab-twitch" onclick="switchTab('twitch')">
+        <i class="fa-brands fa-twitch"></i> Twitch Alerts
+      </li>
+      <li class="nav-item" id="btn-tab-automod" onclick="switchTab('automod')">
+        <i class="fa-solid fa-shield-halved"></i> Auto-Moderation
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="server-select-area">
+        <label style="margin: 0;">Server:</label>
+        <select id="serverSelect" onchange="onServerChange()" style="padding: 8px 12px; min-width: 220px;" disabled>
+          <option value="">Erst mit Discord verbinden...</option>
+        </select>
+        <a id="inviteBotBtn" href="#" target="_blank" class="btn btn-primary" style="display: none; padding: 8px 14px; font-size: 0.85rem;">
+          <i class="fa-solid fa-plus"></i> Bot zu Server hinzufügen
+        </a>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="exportConfig()"><i class="fa-solid fa-floppy-disk"></i> config.json Exportieren</button>
+      </div>
+    </header>
+
+    <div class="content-area">
+
+      <!-- DISCORD TAB -->
+      <div id="tab-discord" class="tab-pane">
+        <div class="card">
+          <div class="card-title">
+            <span><i class="fa-brands fa-discord" style="color: var(--primary);"></i> Discord Account & Serververwaltung</span>
+          </div>
+
+          <div class="status-box">
+            <div class="profile-info">
+              <div class="avatar-circle" id="discordAvatar">
+                <i class="fa-brands fa-discord" style="color: var(--primary);"></i>
+              </div>
+              <div>
+                <div style="font-weight: 600;" id="discordUserName">Nicht mit Discord verbunden</div>
+                <span class="status-badge disconnected" id="discordStatusBadge">Offline</span>
+              </div>
+            </div>
+            <div id="discordActionContainer">
+              <button class="btn btn-discord" onclick="connectDiscord()"><i class="fa-brands fa-discord"></i> Mit Discord verbinden</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Bot API Host-Adresse / URL (bot-hosting.net)</label>
+            <input type="text" id="botApiHost" placeholder="z. B. http://fi17.bot-hosting.cloud:25184" value="http://fi17.bot-hosting.cloud:25184" oninput="saveApiHost()">
+            <small style="color: var(--text-muted);">Lädt alle Rollen und Textkanäle direkt über deinen Bot.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Discord Client-ID (Bot Application ID)</label>
+            <input type="text" id="discordClientId" value="1563209540726431846" oninput="saveClientId(); updateInviteLink();">
+            <small style="color: var(--text-muted);">Dauerhaft hinterlegt und gespeichert.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- NACHRICHT SENDEN TAB -->
+      <div id="tab-sendmessage" class="tab-pane" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-paper-plane" style="color: var(--primary);"></i> Nachricht über Bot senden</span>
+            </div>
+
+            <div class="form-group">
+              <label>Ziel-Kanal auswählen</label>
+              <select id="sendMsgChannelSelect">
+                <option value="">Erst Server oben auswählen...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Titel (Optional)</label>
+              <input type="text" id="msgTitle" placeholder="z. B. Ankündigung / Info" oninput="updateMessagePreview()">
+            </div>
+
+            <div class="form-group">
+              <label>Nachricht / Text</label>
+              <textarea id="msgBody" rows="5" placeholder="Schreibe hier den Text rein..." oninput="updateMessagePreview()">Hallo zusammen! Dies ist eine offizielle Ankündigung.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Rahmenfarbe</label>
+              <input type="color" id="msgColor" value="#5865F2" style="height: 44px; padding: 2px;" oninput="updateMessagePreview()">
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="sendMessageViaBot()">
+              <i class="fa-solid fa-paper-plane"></i> Jetzt in Discord abschicken
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-eye"></i> Live Vorschau</span>
+            </div>
+
+            <div class="discord-chat-container">
+              <div class="chat-message">
+                <div class="bot-avatar"><i class="fa-solid fa-robot" style="color: white;"></i></div>
+                <div class="message-content">
+                  <div class="user-info">
+                    <strong>Morgens-Bot</strong>
+                    <span class="bot-tag">BOT</span>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">heute</span>
+                  </div>
+
+                  <div class="discord-embed" id="previewMsgEmbed">
+                    <div class="embed-title" id="previewMsgTitle" style="display:none;"></div>
+                    <div style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap;" id="previewMsgBody">Hallo zusammen! Dies ist eine offizielle Ankündigung.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UMFRAGEN TAB -->
+      <div id="tab-polls" class="tab-pane" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-square-poll-vertical" style="color: var(--primary);"></i> Umfrage erstellen</span>
+            </div>
+
+            <div class="form-group">
+              <label>Ziel-Kanal auswählen</label>
+              <select id="pollChannelSelect">
+                <option value="">Erst Server oben auswählen...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Frage der Umfrage</label>
+              <input type="text" id="pollQuestion" value="Welches Spiel spielen wir heute Abend?" oninput="updatePollPreview()">
+            </div>
+
+            <div class="form-group">
+              <label>Option 1</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="pollE1" value="1️⃣" style="width: 60px; text-align: center;" oninput="updatePollPreview()">
+                <input type="text" id="pollT1" value="Assetto Corsa" style="flex: 1;" oninput="updatePollPreview()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Option 2</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="pollE2" value="2️⃣" style="width: 60px; text-align: center;" oninput="updatePollPreview()">
+                <input type="text" id="pollT2" value="Counter-Strike 2" style="flex: 1;" oninput="updatePollPreview()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Option 3 (Optional)</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="pollE3" value="3️⃣" style="width: 60px; text-align: center;" oninput="updatePollPreview()">
+                <input type="text" id="pollT3" value="Etwas anderes / Talk" style="flex: 1;" oninput="updatePollPreview()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Farbe</label>
+              <input type="color" id="pollColor" value="#5865F2" style="height: 44px; padding: 2px;" oninput="updatePollPreview()">
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="sendPollViaBot()">
+              <i class="fa-solid fa-paper-plane"></i> Umfrage in Discord posten
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-eye"></i> Umfrage Vorschau</span>
+            </div>
+
+            <div class="discord-chat-container">
+              <div class="chat-message">
+                <div class="bot-avatar"><i class="fa-solid fa-robot" style="color: white;"></i></div>
+                <div class="message-content">
+                  <div class="user-info">
+                    <strong>Morgens-Bot</strong>
+                    <span class="bot-tag">BOT</span>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">heute</span>
+                  </div>
+
+                  <div class="discord-embed" id="previewPollEmbed">
+                    <div class="embed-title" id="previewPollQuestion">📊 Welches Spiel spielen wir heute Abend?</div>
+                    <div style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap; line-height: 1.6;" id="previewPollOptions"></div>
+                    <small style="color: var(--text-muted); margin-top: 4px;">Der Bot reagiert automatisch mit den Emojis zum Abstimmen!</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REAKTIONSROLLEN TAB -->
+      <div id="tab-reactionroles" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-title">
+            <span><i class="fa-solid fa-icons" style="color: var(--primary);"></i> Reaktionsrollen verwalten</span>
+          </div>
+
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">
+            Sobald ein Nutzer auf die angegebene Discord-Nachricht mit dem Emoji reagiert, weist der Bot ihm automatisch die entsprechende Rolle zu (und zieht sie beim Entfernen wieder ab).
+          </p>
+
+          <div class="form-group">
+            <label>Nachrichten-ID (Rechtsklick auf Discord-Nachricht -> ID kopieren)</label>
+            <input type="text" id="rrMessageId" placeholder="z. B. 123456789012345678">
+          </div>
+
+          <div class="form-group" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px;">
+            <div>
+              <label>Emoji auswählen</label>
+              <select id="rrEmojiSelect" onchange="checkCustomEmoji(this)">
+                <optgroup label="🎮 Gaming & Plattformen">
+                  <option value="🎮">🎮 Gaming / Zocken</option>
+                  <option value="🕹️">🕹️ Arcade / Retro</option>
+                  <option value="🏎️">🏎️ Sim-Racing</option>
+                  <option value="🎯">🎯 Shooter / FPS</option>
+                  <option value="💻">💻 PC Spieler</option>
+                </optgroup>
+                <optgroup label="🔔 Benachrichtigungen">
+                  <option value="🔔">🔔 Alle Pings / News</option>
+                  <option value="🔴">🔴 Twitch Live Stream</option>
+                  <option value="🎉">🎉 Giveaways & Events</option>
+                  <option value="📢">📢 Ankündigungen</option>
+                </optgroup>
+                <optgroup label="✨ Sonstiges">
+                  <option value="✅">✅ Verifiziert / Regeln akzeptiert</option>
+                  <option value="🎧">🎧 Voice / Talk</option>
+                  <option value="custom">✏️ Eigenes Emoji eingeben...</option>
+                </optgroup>
+              </select>
+              <input type="text" id="rrCustomEmoji" placeholder="Eigenes Emoji hier..." style="display: none; margin-top: 8px;">
+            </div>
+
+            <div>
+              <label>Discord-Rolle auswählen</label>
+              <select id="rrRoleSelect">
+                <option value="">Erst Server oben auswählen...</option>
+              </select>
+              <small style="color: var(--text-muted);">Wird vollautomatisch über die Bot-API geladen.</small>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="addReactionRole()">
+            <i class="fa-solid fa-plus"></i> Zuordnung hinzufügen
+          </button>
+
+          <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+          <label>Aktive Reaktionsrollen</label>
+          <div id="rrList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- BEGRÜSSUNG TAB -->
+      <div id="tab-welcome" class="tab-pane" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-door-open" style="color: var(--primary);"></i> Willkommens-Nachricht</span>
+            </div>
+
+            <div class="form-group">
+              <label>Willkommens-Kanal auswählen</label>
+              <select id="welcomeChannelSelect">
+                <option value="">Erst Server oben auswählen...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Titel</label>
+              <input type="text" id="welcomeTitle" value="👋 Willkommen auf dem Server!" oninput="updateWelcomePreview()">
+            </div>
+
+            <div class="form-group">
+              <label>Nachrichtentext (Verfügbar: {user}, {server}, {count})</label>
+              <textarea id="welcomeMessage" rows="4" oninput="updateWelcomePreview()">Hey {user}, schön dass du auf {server} bist! Du bist Mitglied #{count}.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Farbe</label>
+              <input type="color" id="welcomeColor" value="#5865F2" style="height: 44px; padding: 2px;" oninput="updateWelcomePreview()">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-eye"></i> Discord Vorschau</span>
+            </div>
+
+            <div class="discord-chat-container">
+              <div class="chat-message">
+                <div class="bot-avatar"><i class="fa-solid fa-robot" style="color: white;"></i></div>
+                <div class="message-content">
+                  <div class="user-info">
+                    <strong>Morgens-Bot</strong>
+                    <span class="bot-tag">BOT</span>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">heute</span>
+                  </div>
+
+                  <div class="discord-embed" id="previewWelcomeEmbed">
+                    <div class="embed-title" id="previewWelcomeTitle">👋 Willkommen auf dem Server!</div>
+                    <div style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap;" id="previewWelcomeText">Hey @User, schön dass du da bist!</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TICKETSYSTEM TAB -->
+      <div id="tab-tickets" class="tab-pane" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-ticket-simple" style="color: var(--primary);"></i> Ticketsystem Einstellungen</span>
+            </div>
+
+            <div class="form-group">
+              <label>Ticket-Panel Kanal auswählen</label>
+              <select id="ticketChannelSelect">
+                <option value="">Erst Server oben auswählen...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Panel Titel</label>
+              <input type="text" id="ticketPanelTitle" value="🎫 Support-Ticket eröffnen" oninput="updateTicketPreview()">
+            </div>
+
+            <div class="form-group">
+              <label>Panel Beschreibung</label>
+              <textarea id="ticketPanelDesc" rows="3" oninput="updateTicketPreview()">Klicke auf den Button unten, um ein privates Ticket mit dem Team zu öffnen.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Panel-Farbe</label>
+              <input type="color" id="ticketPanelColor" value="#5865F2" style="height: 44px; padding: 2px;" oninput="updateTicketPreview()">
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+            <div class="form-group">
+              <label>Text im neu erstellten Ticket-Kanal</label>
+              <textarea id="ticketOpenMsg" rows="3">Willkommen {user}! Ein Supporter wird sich gleich um dein Anliegen kümmern. Beschreibe bitte kurz dein Problem.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Farbe innerhalb des offenen Tickets</label>
+              <input type="color" id="ticketEmbedColor" value="#23a55a" style="height: 44px; padding: 2px;">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-eye"></i> Panel Vorschau</span>
+            </div>
+
+            <div class="discord-chat-container">
+              <div class="chat-message">
+                <div class="bot-avatar"><i class="fa-solid fa-robot" style="color: white;"></i></div>
+                <div class="message-content">
+                  <div class="user-info">
+                    <strong>Morgens-Bot</strong>
+                    <span class="bot-tag">BOT</span>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">heute</span>
+                  </div>
+
+                  <div class="discord-embed" id="previewTicketEmbed">
+                    <div class="embed-title" id="previewTicketTitle">🎫 Support-Ticket eröffnen</div>
+                    <div style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap;" id="previewTicketDesc">Klicke auf den Button unten, um ein privates Ticket mit dem Team zu öffnen.</div>
+                    
+                    <button class="btn btn-primary" style="margin-top: 10px; width: fit-content; pointer-events: none;">
+                      <i class="fa-solid fa-envelope-open-text"></i> Ticket erstellen
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TWITCH TAB -->
+      <div id="tab-twitch" class="tab-pane" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-brands fa-twitch" style="color: var(--twitch)"></i> Twitch Streamer Alert</span>
+            </div>
+
+            <div class="form-group">
+              <label>Twitch-Kanalname (Benutzername)</label>
+              <input type="text" id="twitchChannelInput" placeholder="z. B. Mr_Morgens" oninput="updateTwitchPreview()">
+              <small style="color: var(--text-muted);">Dein Twitch-Kanal wird vom Bot automatisch ohne Login oder API-Key überwacht.</small>
+            </div>
+
+            <div class="form-group">
+              <label>Discord Alert-Kanal auswählen</label>
+              <select id="twitchChannelSelect">
+                <option value="">Erst Server oben auswählen...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Benachrichtigungstext</label>
+              <input type="text" id="alertMessage" value="🔴 Hey @everyone! {streamer} ist jetzt live auf Twitch!" oninput="updateTwitchPreview()">
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Balkenfarbe</label>
+              <input type="color" id="twitchEmbedColor" value="#9146FF" style="height: 44px; padding: 2px;" oninput="updateTwitchPreview()">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span><i class="fa-solid fa-eye"></i> Live Discord Vorschau</span>
+            </div>
+
+            <div class="discord-chat-container">
+              <div class="chat-message">
+                <div class="bot-avatar"><i class="fa-solid fa-robot" style="color: white;"></i></div>
+                <div class="message-content">
+                  <div class="user-info">
+                    <strong>Morgens-Bot</strong>
+                    <span class="bot-tag">BOT</span>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">heute</span>
+                  </div>
+
+                  <div id="previewText" style="margin-bottom: 6px;">
+                    🔴 Hey <span style="background: rgba(88,101,242,0.3); color: #c9cdfb; padding: 1px 4px; border-radius: 3px;">@everyone</span>! <span id="previewStreamerName">Streamer</span> ist jetzt live!
+                  </div>
+
+                  <div class="discord-embed" id="previewEmbed" style="border-left-color: var(--twitch);">
+                    <a href="#" class="embed-title" id="previewStreamTitle">Live Stream Session 🎧🏁</a>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">https://twitch.tv/...</div>
+                    <div style="width: 100%; height: 130px; background: #181b26; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); border: 1px dashed var(--border-color);">
+                      <i class="fa-brands fa-twitch" style="font-size: 2rem; color: var(--twitch);"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="simulateBotTwitchAlert()">
+              <i class="fa-solid fa-paper-plane"></i> Test-Alert jetzt in Discord senden
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTO-MOD TAB -->
+      <div id="tab-automod" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-title">
+            <span><i class="fa-solid fa-shield-halved"></i> Wortfilter & Auto-Moderation</span>
+          </div>
+          <div class="form-group">
+            <label>Neues verbotenes Wort hinzufügen</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="newBadWord" placeholder="z. B. scam-link.com" style="flex: 1;">
+              <button class="btn btn-primary" onclick="addBadWord()"><i class="fa-solid fa-plus"></i> Hinzufügen</button>
+            </div>
+          </div>
+          <label>Aktive Blacklist</label>
+          <div class="tag-container" id="badWordList"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    let currentConfig = {
+      bot_token: "DEIN_BOT_TOKEN",
+      selected_guild_id: "",
+      twitch_channel_name: "",
+      twitch_alert_channel_id: "",
+      colors: { 
+        embed_twitch: "#9146FF", 
+        embed_primary: "#5865F2", 
+        embed_error: "#ED4245" 
+      },
+      welcome: {
+        channel_id: "",
+        title: "👋 Willkommen auf dem Server!",
+        message: "Hey {user}, schön dass du auf {server} bist! Du bist Mitglied #{count}.",
+        color: "#5865F2"
+      },
+      tickets: {
+        panel_channel_id: "",
+        panel_title: "🎫 Support-Ticket eröffnen",
+        panel_desc: "Klicke auf den Button unten, um ein privates Ticket mit dem Team zu öffnen.",
+        panel_color: "#5865F2",
+        open_message: "Willkommen {user}! Ein Supporter wird sich gleich um dein Anliegen kümmern.",
+        embed_color: "#23a55a"
+      },
+      reaction_roles: [],
+      blocked_words: ["badword1", "scamlink.com"]
+    };
+
+    let userGuilds = [];
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      
+      const targetPane = document.getElementById(`tab-${tabId}`);
+      const targetBtn = document.getElementById(`btn-tab-${tabId}`);
+
+      if (targetPane) targetPane.style.display = 'block';
+      if (targetBtn) targetBtn.classList.add('active');
+    }
+
+    function saveApiHost() {
+      localStorage.setItem("bot_api_host", document.getElementById('botApiHost').value.trim());
+    }
+
+    function saveClientId() {
+      localStorage.setItem("discord_client_id", document.getElementById('discordClientId').value.trim());
+    }
+
+    function checkCustomEmoji(selectEl) {
+      const customInput = document.getElementById('rrCustomEmoji');
+      if (!customInput) return;
+      if (selectEl.value === 'custom') {
+        customInput.style.display = 'block';
+      } else {
+        customInput.style.display = 'none';
+      }
+    }
+
+    function connectDiscord() {
+      const clientId = document.getElementById('discordClientId').value.trim();
+      if (!clientId) {
+        alert("Bitte trage zuerst deine Discord Client-ID im Feld ein!");
+        return;
+      }
+      saveClientId();
+
+      const redirectUri = window.location.origin + window.location.pathname;
+      const scope = "identify guilds";
+      const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+      window.location.href = authUrl;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      renderBadWords();
+      renderReactionRoles();
+      updateTwitchPreview();
+      updateWelcomePreview();
+      updateTicketPreview();
+      updateMessagePreview();
+      updatePollPreview();
+
+      const savedDiscordId = localStorage.getItem("discord_client_id");
+      if (savedDiscordId) {
+        document.getElementById('discordClientId').value = savedDiscordId;
+      }
+      updateInviteLink();
+
+      const savedApiHost = localStorage.getItem("bot_api_host");
+      if (savedApiHost) {
+        document.getElementById('botApiHost').value = savedApiHost;
+      }
+
+      // Token aus URL-Hash oder Speicher lesen
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      let accessToken = params.get('access_token');
+
+      if (accessToken) {
+        sessionStorage.setItem("discord_token", accessToken);
+        window.history.replaceState(null, null, window.location.pathname);
+      } else {
+        accessToken = sessionStorage.getItem("discord_token");
+      }
+
+      if (accessToken) {
+        try {
+          const res = await fetch('https://discord.com/api/users/@me', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+          if (!res.ok) throw new Error("Fehler beim Abrufen des Discord-Profils");
+          const userData = await res.json();
+          setDiscordConnected(userData, accessToken);
+        } catch (e) {
+          console.error("Discord Login-Fehler:", e);
+          sessionStorage.removeItem("discord_token");
+        }
+      }
+    });
+
+    function setDiscordConnected(user, token) {
+      const nameEl = document.getElementById('discordUserName');
+      if (nameEl) nameEl.innerText = user.global_name || user.username;
+
+      const badge = document.getElementById('discordStatusBadge');
+      if (badge) {
+        badge.className = 'status-badge connected';
+        badge.innerText = '🟢 Verbunden';
+      }
+
+      const avatarEl = document.getElementById('discordAvatar');
+      if (avatarEl && user.avatar) {
+        avatarEl.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png">`;
+      }
+
+      fetch('https://discord.com/api/users/@me/guilds', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(guilds => {
+        if (Array.isArray(guilds)) {
+          userGuilds = guilds.filter(g => g.owner || (BigInt(g.permissions) & 0x8n) === 0x8n || (BigInt(g.permissions) & 0x20n) === 0x20n);
+          const select = document.getElementById('serverSelect');
+          if (select) {
+            select.innerHTML = '<option value="">-- Wähle einen Server --</option>';
+            userGuilds.forEach(g => {
+              const opt = document.createElement('option');
+              opt.value = g.id;
+              opt.innerText = g.name;
+              select.appendChild(opt);
+            });
+            select.disabled = false;
+          }
+        }
+      })
+      .catch(err => console.error("Fehler beim Laden der Server:", err));
+
+      const actionContainer = document.getElementById('discordActionContainer');
+      if (actionContainer) {
+        actionContainer.innerHTML = `
+          <button class="btn btn-danger" onclick="logoutDiscord()"><i class="fa-solid fa-link-slash"></i> Trennen</button>
+        `;
+      }
+    }
+
+    function logoutDiscord() {
+      sessionStorage.removeItem("discord_token");
+      location.reload();
+    }
+
+    async function onServerChange() {
+      const select = document.getElementById('serverSelect');
+      const guildId = select ? select.value : "";
+      currentConfig.selected_guild_id = guildId;
+      updateInviteLink();
+
+      if (!guildId) return;
+
+      const apiHost = document.getElementById('botApiHost').value.trim() || "http://fi17.bot-hosting.cloud:25184";
+      const apiUrl = `${apiHost.replace(/\/$/, "")}/api/guild/${guildId}`;
+
+      const allChannelSelects = [
+        document.getElementById('sendMsgChannelSelect'),
+        document.getElementById('pollChannelSelect'),
+        document.getElementById('welcomeChannelSelect'),
+        document.getElementById('ticketChannelSelect'),
+        document.getElementById('twitchChannelSelect')
+      ];
+      const roleSelect = document.getElementById('rrRoleSelect');
+
+      allChannelSelects.forEach(sel => {
+        if (sel) sel.innerHTML = '<option value="">Kanäle werden geladen...</option>';
+      });
+      if (roleSelect) roleSelect.innerHTML = '<option value="">Rollen werden geladen...</option>';
+
+      try {
+        const resp = await fetch(apiUrl);
+        if (!resp.ok) throw new Error("Bot-API nicht erreichbar");
+        const data = await resp.json();
+
+        allChannelSelects.forEach(sel => {
+          if (!sel) return;
+          sel.innerHTML = '<option value="">-- Wähle einen Textkanal --</option>';
+          data.channels.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.innerText = `# ${c.name}`;
+            sel.appendChild(opt);
+          });
+        });
+
+        if (roleSelect) {
+          roleSelect.innerHTML = '<option value="">-- Wähle eine Rolle --</option>';
+          data.roles.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.innerText = `@ ${r.name}`;
+            roleSelect.appendChild(opt);
+          });
+        }
+      } catch (e) {
+        console.warn("Konnte Daten nicht vom Bot abrufen:", e);
+        allChannelSelects.forEach(sel => {
+          if (sel) sel.innerHTML = '<option value="">Bot offline / Port prüfen</option>';
+        });
+        if (roleSelect) roleSelect.innerHTML = '<option value="">Bot offline / Port prüfen</option>';
+      }
+    }
+
+    function updateInviteLink() {
+      const clientId = document.getElementById('discordClientId').value.trim();
+      const inviteBtn = document.getElementById('inviteBotBtn');
+      if (!inviteBtn) return;
+      if (clientId) {
+        inviteBtn.style.display = 'inline-flex';
+        let url = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`;
+        if (currentConfig.selected_guild_id) {
+          url += `&guild_id=${currentConfig.selected_guild_id}`;
+        }
+        inviteBtn.href = url;
+      } else {
+        inviteBtn.style.display = 'none';
+      }
+    }
+
+    // --- SICHERE PREVIEWS OHNE NULL-CRASH ---
+    function updateMessagePreview() {
+      const color = document.getElementById('msgColor')?.value || "#5865F2";
+      const title = document.getElementById('msgTitle')?.value.trim() || "";
+      const body = document.getElementById('msgBody')?.value || "";
+
+      const previewEmbed = document.getElementById('previewMsgEmbed');
+      if (previewEmbed) previewEmbed.style.borderLeftColor = color;
+
+      const titleEl = document.getElementById('previewMsgTitle');
+      if (titleEl) {
+        if (title) {
+          titleEl.innerText = title;
+          titleEl.style.display = 'block';
+        } else {
+          titleEl.style.display = 'none';
+        }
+      }
+
+      const bodyEl = document.getElementById('previewMsgBody');
+      if (bodyEl) bodyEl.innerText = body || "...";
+    }
+
+    function updatePollPreview() {
+      const color = document.getElementById('pollColor')?.value || "#5865F2";
+      const q = document.getElementById('pollQuestion')?.value.trim() || "";
+      const e1 = document.getElementById('pollE1')?.value.trim() || "";
+      const t1 = document.getElementById('pollT1')?.value.trim() || "";
+      const e2 = document.getElementById('pollE2')?.value.trim() || "";
+      const t2 = document.getElementById('pollT2')?.value.trim() || "";
+      const e3 = document.getElementById('pollE3')?.value.trim() || "";
+      const t3 = document.getElementById('pollT3')?.value.trim() || "";
+
+      const embed = document.getElementById('previewPollEmbed');
+      if (embed) embed.style.borderLeftColor = color;
+
+      const qEl = document.getElementById('previewPollQuestion');
+      if (qEl) qEl.innerText = `📊 ${q || 'Umfrage'}`;
+
+      let optText = "";
+      if (t1) optText += `${e1} **${t1}**\n`;
+      if (t2) optText += `${e2} **${t2}**\n`;
+      if (t3) optText += `${e3} **${t3}**\n`;
+
+      const optEl = document.getElementById('previewPollOptions');
+      if (optEl) optEl.innerText = optText;
+    }
+
+    function updateTwitchPreview() {
+      const color = document.getElementById('twitchEmbedColor')?.value || "#9146FF";
+      const streamerInput = document.getElementById('twitchChannelInput');
+      const streamer = streamerInput ? (streamerInput.value.trim() || "Streamer") : "Streamer";
+      const msgTemplate = document.getElementById('alertMessage')?.value || "🔴 Hey @everyone! {streamer} ist jetzt live auf Twitch!";
+
+      const embed = document.getElementById('previewEmbed');
+      if (embed) embed.style.borderLeftColor = color;
+
+      const previewText = document.getElementById('previewText');
+      if (previewText) previewText.innerText = msgTemplate.replace('{streamer}', streamer);
+
+      const nameEl = document.getElementById('previewStreamerName');
+      if (nameEl) nameEl.innerText = streamer;
+    }
+
+    function updateWelcomePreview() {
+      const color = document.getElementById('welcomeColor')?.value || "#5865F2";
+      const title = document.getElementById('welcomeTitle')?.value || "";
+      let msg = document.getElementById('welcomeMessage')?.value || "";
+      
+      msg = msg.replace(/{user}/g, "@User").replace(/{server}/g, "Community Server").replace(/{count}/g, "128");
+
+      const embed = document.getElementById('previewWelcomeEmbed');
+      if (embed) embed.style.borderLeftColor = color;
+
+      const titleEl = document.getElementById('previewWelcomeTitle');
+      if (titleEl) titleEl.innerText = title;
+
+      const textEl = document.getElementById('previewWelcomeText');
+      if (textEl) textEl.innerText = msg;
+    }
+
+    function updateTicketPreview() {
+      const color = document.getElementById('ticketPanelColor')?.value || "#5865F2";
+      const title = document.getElementById('ticketPanelTitle')?.value || "";
+      const desc = document.getElementById('ticketPanelDesc')?.value || "";
+
+      const embed = document.getElementById('previewTicketEmbed');
+      if (embed) embed.style.borderLeftColor = color;
+
+      const titleEl = document.getElementById('previewTicketTitle');
+      if (titleEl) titleEl.innerText = title;
+
+      const descEl = document.getElementById('previewTicketDesc');
+      if (descEl) descEl.innerText = desc;
+    }
+
+    // --- SENDEBEFEHLE AN DEN BOT ---
+    async function sendMessageViaBot() {
+      const channelId = document.getElementById('sendMsgChannelSelect').value;
+      const title = document.getElementById('msgTitle').value.trim();
+      const body = document.getElementById('msgBody').value.trim();
+      const colorInt = parseInt(document.getElementById('msgColor').value.replace("#", ""), 16);
+
+      if (!channelId) return alert("Bitte wähle zuerst einen Zielkanal aus dem Dropdown aus!");
+      if (!body) return alert("Bitte gib einen Nachrichtentext ein!");
+
+      const apiHost = document.getElementById('botApiHost').value.trim() || "http://fi17.bot-hosting.cloud:25184";
+      try {
+        const resp = await fetch(`${apiHost.replace(/\/$/, "")}/api/send-message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_id: channelId,
+            title: title,
+            body: body,
+            color: colorInt
+          })
+        });
+
+        if (resp.ok) {
+          alert("✅ Nachricht wurde erfolgreich über den Bot gesendet!");
+        } else {
+          const err = await resp.json();
+          alert("Fehler beim Senden: " + (err.error || "Unbekannt"));
+        }
+      } catch (e) {
+        alert("Netzwerkfehler: " + e);
+      }
+    }
+
+    async function sendPollViaBot() {
+      const channelId = document.getElementById('pollChannelSelect').value;
+      const q = document.getElementById('pollQuestion').value.trim();
+      const e1 = document.getElementById('pollE1').value.trim();
+      const t1 = document.getElementById('pollT1').value.trim();
+      const e2 = document.getElementById('pollE2').value.trim();
+      const t2 = document.getElementById('pollT2').value.trim();
+      const e3 = document.getElementById('pollE3').value.trim();
+      const t3 = document.getElementById('pollT3').value.trim();
+      const colorInt = parseInt(document.getElementById('pollColor').value.replace("#", ""), 16);
+
+      if (!channelId) return alert("Bitte wähle zuerst einen Zielkanal aus dem Dropdown aus!");
+      if (!q) return alert("Bitte gib eine Umfrage-Frage ein!");
+
+      const options = [];
+      if (t1) options.push({ emoji: e1, text: t1 });
+      if (t2) options.push({ emoji: e2, text: t2 });
+      if (t3) options.push({ emoji: e3, text: t3 });
+
+      const apiHost = document.getElementById('botApiHost').value.trim() || "http://fi17.bot-hosting.cloud:25184";
+      try {
+        const resp = await fetch(`${apiHost.replace(/\/$/, "")}/api/send-poll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_id: channelId,
+            question: q,
+            options: options,
+            color: colorInt
+          })
+        });
+
+        if (resp.ok) {
+          alert("✅ Umfrage erfolgreich gepostet! Der Bot hat die Emojis druntergesetzt.");
+        } else {
+          const err = await resp.json();
+          alert("Fehler beim Senden: " + (err.error || "Unbekannt"));
+        }
+      } catch (e) {
+        alert("Netzwerkfehler: " + e);
+      }
+    }
+
+    async function simulateBotTwitchAlert() {
+      const channelId = document.getElementById('twitchChannelSelect').value;
+      if (!channelId) return alert("Bitte wähle im Dropdown zuerst den Twitch-Alert-Kanal aus!");
+      
+      const streamer = document.getElementById('twitchChannelInput').value.trim() || "Streamer";
+      const colorInt = parseInt(document.getElementById('twitchEmbedColor').value.replace("#", ""), 16);
+      const apiHost = document.getElementById('botApiHost').value.trim() || "http://fi17.bot-hosting.cloud:25184";
+
+      try {
+        const resp = await fetch(`${apiHost.replace(/\/$/, "")}/api/send-message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_id: channelId,
+            title: `🔴 ${streamer} ist live auf Twitch!`,
+            body: `Hey @everyone! **${streamer}** streamt jetzt live: https://twitch.tv/${streamer}`,
+            color: colorInt
+          })
+        });
+        if (resp.ok) alert("✅ Test-Alert erfolgreich in deinen ausgewählten Kanal gesendet!");
+        else alert("Fehler beim Senden des Alerts.");
+      } catch (e) {
+        alert("Netzwerkfehler: " + e);
+      }
+    }
+
+    function renderReactionRoles() {
+      const container = document.getElementById('rrList');
+      if (!container) return;
+      container.innerHTML = "";
+      if (!currentConfig.reaction_roles || currentConfig.reaction_roles.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Noch keine Reaktionsrollen angelegt.</span>';
+        return;
+      }
+      currentConfig.reaction_roles.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'status-box';
+        div.innerHTML = `
+          <div>
+            <strong>Nachricht:</strong> <code>${item.message_id}</code> | 
+            <strong>Emoji:</strong> ${item.emoji} | 
+            <strong>Rolle:</strong> <span style="color: var(--primary); font-weight: 600;">${item.role_name || item.role_id}</span>
+          </div>
+          <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem;" onclick="removeReactionRole(${idx})">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function addReactionRole() {
+      const msgId = document.getElementById('rrMessageId').value.trim();
+      const emojiSelect = document.getElementById('rrEmojiSelect');
+      const roleSelect = document.getElementById('rrRoleSelect');
+
+      let emoji = emojiSelect.value;
+      if (emoji === 'custom') {
+        emoji = document.getElementById('rrCustomEmoji').value.trim();
+      }
+
+      const roleId = roleSelect.value;
+      const roleName = roleSelect.options[roleSelect.selectedIndex]?.text || roleId;
+
+      if (!msgId) return alert("Bitte gib die Nachrichten-ID ein!");
+      if (!emoji) return alert("Bitte wähle ein Emoji aus!");
+      if (!roleId) return alert("Bitte wähle eine Rolle aus dem Dropdown aus!");
+
+      currentConfig.reaction_roles.push({
+        message_id: msgId,
+        emoji: emoji,
+        role_id: roleId,
+        role_name: roleName
+      });
+
+      document.getElementById('rrMessageId').value = "";
+      document.getElementById('rrCustomEmoji').value = "";
+      renderReactionRoles();
+    }
+
+    function removeReactionRole(idx) {
+      currentConfig.reaction_roles.splice(idx, 1);
+      renderReactionRoles();
+    }
+
+    function renderBadWords() {
+      const list = document.getElementById('badWordList');
+      if (!list) return;
+      list.innerHTML = "";
+      currentConfig.blocked_words.forEach((word, index) => {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.innerHTML = `${word} <i class="fa-solid fa-xmark" onclick="removeBadWord(${index})"></i>`;
+        list.appendChild(tag);
+      });
+    }
+
+    function addBadWord() {
+      const input = document.getElementById('newBadWord');
+      const val = input.value.trim().toLowerCase();
+      if (val && !currentConfig.blocked_words.includes(val)) {
+        currentConfig.blocked_words.push(val);
+        input.value = "";
+        renderBadWords();
+      }
+    }
+
+    function removeBadWord(idx) {
+      currentConfig.blocked_words.splice(idx, 1);
+      renderBadWords();
+    }
+
+    function exportConfig() {
+      const twitchInput = document.getElementById('twitchChannelInput');
+      const twitchSelect = document.getElementById('twitchChannelSelect');
+      const twitchColor = document.getElementById('twitchEmbedColor');
+
+      if (twitchInput) currentConfig.twitch_channel_name = twitchInput.value.trim();
+      if (twitchSelect) currentConfig.twitch_alert_channel_id = twitchSelect.value;
+      if (twitchColor) currentConfig.colors.embed_twitch = twitchColor.value;
+
+      const welcomeSel = document.getElementById('welcomeChannelSelect');
+      currentConfig.welcome = {
+        channel_id: welcomeSel ? welcomeSel.value : "",
+        title: document.getElementById('welcomeTitle')?.value.trim() || "",
+        message: document.getElementById('welcomeMessage')?.value || "",
+        color: document.getElementById('welcomeColor')?.value || "#5865F2"
+      };
+
+      const ticketSel = document.getElementById('ticketChannelSelect');
+      currentConfig.tickets = {
+        panel_channel_id: ticketSel ? ticketSel.value : "",
+        panel_title: document.getElementById('ticketPanelTitle')?.value.trim() || "",
+        panel_desc: document.getElementById('ticketPanelDesc')?.value || "",
+        panel_color: document.getElementById('ticketPanelColor')?.value || "#5865F2",
+        open_message: document.getElementById('ticketOpenMsg')?.value || "",
+        embed_color: document.getElementById('ticketEmbedColor')?.value || "#23a55a"
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentConfig, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "config.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  </script>
+</body>
+</html>
