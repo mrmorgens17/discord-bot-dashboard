@@ -80,6 +80,26 @@
     .nav-item:hover, .nav-item.active { background-color: var(--bg-card-hover); color: var(--text-main); }
     .nav-item.active { background-color: rgba(88, 101, 242, 0.15); color: var(--primary); font-weight: 600; }
 
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      background: #0d0f17;
+    }
+
+    .sidebar-footer a {
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-main);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .sidebar-footer a:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
     .main-content {
       flex: 1;
       display: flex;
@@ -288,6 +308,9 @@
       <li class="nav-item" id="btn-tab-polls" onclick="switchTab('polls')">
         <i class="fa-solid fa-square-poll-vertical"></i> Umfragen
       </li>
+      <li class="nav-item" id="btn-tab-giveaways" onclick="switchTab('giveaways')">
+        <i class="fa-solid fa-gift"></i> Gewinnspiele
+      </li>
       <li class="nav-item" id="btn-tab-reactionroles" onclick="switchTab('reactionroles')">
         <i class="fa-solid fa-icons"></i> Reaktionsrollen
       </li>
@@ -304,6 +327,17 @@
         <i class="fa-solid fa-shield-halved"></i> Auto-Moderation
       </li>
     </ul>
+
+    <!-- Made by Mr_Morgens Twitch Footer -->
+    <div class="sidebar-footer">
+      <a href="https://twitch.tv/Mr_Morgens" target="_blank" title="Besuche Mr_Morgens auf Twitch">
+        <i class="fa-brands fa-twitch" style="color: var(--twitch); font-size: 1.45rem;"></i>
+        <div>
+          <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Made by Mr_Morgens</div>
+          <div style="color: var(--text-muted); font-size: 0.75rem;">Follow me on Twitch 💜</div>
+        </div>
+      </a>
+    </div>
   </aside>
 
   <!-- Main Content -->
@@ -504,6 +538,46 @@
         </div>
       </div>
 
+      <!-- GEWINNSPIELE TAB -->
+      <div id="tab-giveaways" class="tab-pane" style="display: none;">
+        <div class="card">
+          <div class="card-title">
+            <span><i class="fa-solid fa-gift" style="color: var(--primary);"></i> Gewinnspiel / Giveaway erstellen</span>
+          </div>
+          
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">
+            Erstellt ein offizielles Giveaway mit Countdown im Discord. Der Bot reagiert mit 🎉 und wählt nach Ablauf automatisch Zufallsgewinner aus.
+          </p>
+
+          <div class="form-group">
+            <label>Ziel-Kanal auswählen</label>
+            <select id="giveawayChannelSelect">
+              <option value="">Erst Server oben auswählen...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Preis / Gewinn</label>
+            <input type="text" id="giveawayPrize" placeholder="z. B. Discord Nitro, Steam Key, Skin">
+          </div>
+
+          <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <label>Dauer (in Minuten)</label>
+              <input type="number" id="giveawayDuration" value="10" min="1">
+            </div>
+            <div>
+              <label>Anzahl der Gewinner</label>
+              <input type="number" id="giveawayWinners" value="1" min="1" max="10">
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="startGiveawayViaBot()">
+            <i class="fa-solid fa-gift"></i> Gewinnspiel jetzt in Discord starten
+          </button>
+        </div>
+      </div>
+
       <!-- REAKTIONSROLLEN TAB -->
       <div id="tab-reactionroles" class="tab-pane" style="display: none;">
         <div class="card">
@@ -682,6 +756,10 @@
               <label>Farbe innerhalb des offenen Tickets</label>
               <input type="color" id="ticketEmbedColor" value="#23a55a" style="height: 44px; padding: 2px;">
             </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="sendTicketPanelViaBot()">
+              <i class="fa-solid fa-ticket"></i> Ticket-Panel in Discord posten
+            </button>
           </div>
 
           <div class="card">
@@ -805,6 +883,13 @@
           </div>
           <label>Aktive Blacklist</label>
           <div class="tag-container" id="badWordList"></div>
+
+          <div style="margin-top: 20px; display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-primary" onclick="saveAutoModSettings()">
+              💾 Blacklist auf Bot speichern
+            </button>
+            <span id="automodSaveStatus" style="font-size: 0.9rem;"></span>
+          </div>
         </div>
       </div>
 
@@ -1001,6 +1086,7 @@
       const allChannelSelects = [
         document.getElementById('sendMsgChannelSelect'),
         document.getElementById('pollChannelSelect'),
+        document.getElementById('giveawayChannelSelect'),
         document.getElementById('welcomeChannelSelect'),
         document.getElementById('ticketChannelSelect'),
         document.getElementById('twitchChannelSelect')
@@ -1044,7 +1130,7 @@
           });
         });
 
-        // Gespeicherte Server-Konfiguration vom Bot laden, falls vorhanden
+        // Gespeicherte Server-Konfiguration vom Bot laden
         if (data.config) {
           if (data.config.twitch) {
             document.getElementById('twitchChannelInput').value = data.config.twitch.twitch_channel || "";
@@ -1064,6 +1150,10 @@
           if (data.config.reaction_roles) {
             currentConfig.reaction_roles = data.config.reaction_roles;
             renderReactionRoles();
+          }
+          if (data.config.blocked_words) {
+            currentConfig.blocked_words = data.config.blocked_words;
+            renderBadWords();
           }
         }
       } catch (e) {
@@ -1189,15 +1279,12 @@
       if (descEl) descEl.innerText = desc;
     }
 
-    // --- NEUE SPEICHERFUNKTIONEN FÜR BEGRÜSSUNG & TWITCH ---
+    // --- SPEICHERFUNKTIONEN FÜR BEGRÜSSUNG & TWITCH ---
     async function saveWelcomeSettings() {
       const guildId = document.getElementById('serverSelect').value;
       const statusSpan = document.getElementById('welcomeSaveStatus');
 
-      if (!guildId) {
-        alert("Bitte wähle zuerst oben einen Server aus.");
-        return;
-      }
+      if (!guildId) return alert("Bitte wähle zuerst oben einen Server aus.");
 
       statusSpan.innerText = "Speichere...";
       statusSpan.style.color = "#aaa";
@@ -1238,15 +1325,8 @@
       const alertChannelId = document.getElementById('twitchChannelSelect').value;
       const statusSpan = document.getElementById('twitchSaveStatus');
 
-      if (!guildId) {
-        alert("Bitte wähle zuerst oben einen Server aus.");
-        return;
-      }
-
-      if (!twitchName) {
-        alert("Bitte gib einen Twitch-Kanalnamen ein.");
-        return;
-      }
+      if (!guildId) return alert("Bitte wähle zuerst oben einen Server aus.");
+      if (!twitchName) return alert("Bitte gib einen Twitch-Kanalnamen ein.");
 
       statusSpan.innerText = "Speichere...";
       statusSpan.style.color = "#aaa";
@@ -1355,6 +1435,71 @@
       }
     }
 
+    // --- GEWINNSPIEL / GIVEAWAY STARTEN ---
+    async function startGiveawayViaBot() {
+      const channelId = document.getElementById('giveawayChannelSelect').value;
+      const prize = document.getElementById('giveawayPrize').value.trim();
+      const duration = parseInt(document.getElementById('giveawayDuration').value, 10);
+      const winners = parseInt(document.getElementById('giveawayWinners').value, 10);
+
+      if (!channelId) return alert("Bitte wähle zuerst einen Zielkanal aus!");
+      if (!prize) return alert("Bitte gib einen Gewinn an!");
+
+      try {
+        const resp = await fetch(`${getApiBase()}/api/giveaway/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_id: channelId,
+            prize: prize,
+            duration_minutes: duration,
+            winners_count: winners
+          })
+        });
+
+        if (resp.ok) {
+          alert("🎉 Gewinnspiel wurde erfolgreich in Discord gestartet!");
+          document.getElementById('giveawayPrize').value = "";
+        } else {
+          alert("Fehler beim Starten des Gewinnspiels.");
+        }
+      } catch (e) {
+        alert("Netzwerkfehler: " + e);
+      }
+    }
+
+    // --- TICKET-PANEL IN DISCORD POSTEN ---
+    async function sendTicketPanelViaBot() {
+      const channelId = document.getElementById('ticketChannelSelect').value;
+      const title = document.getElementById('ticketPanelTitle').value.trim();
+      const desc = document.getElementById('ticketPanelDesc').value.trim();
+      const color = parseInt(document.getElementById('ticketPanelColor').value.replace("#", ""), 16);
+
+      if (!channelId) return alert("Bitte wähle zuerst einen Kanal für das Ticket-Panel aus!");
+
+      try {
+        const resp = await fetch(`${getApiBase()}/api/tickets/post-panel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_id: channelId,
+            title: title,
+            desc: desc,
+            color: color
+          })
+        });
+
+        if (resp.ok) {
+          alert("✅ Ticket-Panel mit Button wurde in Discord gepostet!");
+        } else {
+          alert("Fehler beim Senden des Ticket-Panels.");
+        }
+      } catch (e) {
+        alert("Netzwerkfehler: " + e);
+      }
+    }
+
+    // --- TWITCH TEST-ALERT ---
     async function simulateBotTwitchAlert() {
       const channelId = document.getElementById('twitchChannelSelect').value;
       if (!channelId) return alert("Bitte wähle im Dropdown zuerst den Twitch-Alert-Kanal aus!");
@@ -1474,6 +1619,7 @@
       syncReactionRolesToBot();
     }
 
+    // --- AUTO-MODERATION ---
     function renderBadWords() {
       const list = document.getElementById('badWordList');
       if (!list) return;
@@ -1501,6 +1647,34 @@
       renderBadWords();
     }
 
+    async function saveAutoModSettings() {
+      const statusSpan = document.getElementById('automodSaveStatus');
+      statusSpan.innerText = "Speichere...";
+      statusSpan.style.color = "#aaa";
+
+      try {
+        const resp = await fetch(`${getApiBase()}/api/automod/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            blocked_words: currentConfig.blocked_words
+          })
+        });
+
+        if (resp.ok) {
+          statusSpan.innerText = "✅ Blacklist erfolgreich gespeichert!";
+          statusSpan.style.color = "#4ade80";
+          setTimeout(() => { statusSpan.innerText = ""; }, 4000);
+        } else {
+          throw new Error("Fehler beim Speichern");
+        }
+      } catch (e) {
+        statusSpan.innerText = "❌ Fehler (Bot offline oder Port prüfen)";
+        statusSpan.style.color = "#f87171";
+      }
+    }
+
+    // --- CONFIG EXPORTIEREN ---
     function exportConfig() {
       const twitchInput = document.getElementById('twitchChannelInput');
       const twitchSelect = document.getElementById('twitchChannelSelect');
